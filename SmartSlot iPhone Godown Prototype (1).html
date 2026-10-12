@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SmartSlot iPhone Godown Prototype</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#e8e9e4;--card:#f6f6f2;--ink:#1d2a33;--mut:#5d6a72;--line:#c9cbc4;--amb:#c98a1b;--bad:#c23b2e;--ok:#3a7d44}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161d22;--card:#1f282e;--ink:#e6e9e6;--mut:#93a0a8;--line:#34414a;--amb:#e0a43a;--bad:#ef6a5b;--ok:#6cbf78}}
+:root[data-theme="dark"]{--bg:#161d22;--card:#1f282e;--ink:#e6e9e6;--mut:#93a0a8;--line:#34414a;--amb:#e0a43a;--bad:#ef6a5b;--ok:#6cbf78}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans",system-ui,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:20px 16px 48px}
+h1,h2{font-family:"Barlow Condensed",Impact,sans-serif;margin:0;letter-spacing:.01em}
+h1{font-size:40px;line-height:1}
+h2{font-size:24px;margin:28px 0 10px}
+p.sub{color:var(--mut);margin:6px 0 0;max-width:62ch}
+.meta{color:var(--mut);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);padding:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:18px}
+.alert{background:var(--bad);color:#fff;padding:10px 14px;margin-top:14px;display:none;font-weight:500}
+.qr{background:#fff;padding:10px;width:200px;height:200px;margin:0 auto;display:flex;align-items:center;justify-content:center;color:#000}
+.qr img,.qr canvas{max-width:100%;height:auto}
+.scan{margin-top:12px;border:1px dashed var(--line);padding:10px 12px;font-size:14px}
+.scan div{display:flex;justify-content:space-between;gap:10px;padding:2px 0}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.stat b{display:block;font-family:"Barlow Condensed",sans-serif;font-size:46px;line-height:1}
+.stat span{font-size:13px;color:var(--mut)}
+.in b{color:var(--ok)}.out b{color:var(--bad)}
+.bar{height:8px;background:var(--line);margin:8px 0 4px}.bar i{display:block;height:100%;background:var(--amb)}
+.bins{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;margin-top:10px}
+.bins b{aspect-ratio:1;background:var(--line);position:relative;overflow:hidden}
+.bins b i{position:absolute;left:0;right:0;bottom:0;background:var(--amb)}
+.temp{font-family:"Barlow Condensed",sans-serif;font-size:40px;font-weight:700;line-height:1;color:var(--amb)}
+.temp.hot{color:var(--bad)}
+select,button{font:inherit;padding:8px 10px;border:1px solid var(--ink);background:var(--card);color:var(--ink)}
+button{background:var(--ink);color:var(--bg);cursor:pointer}
+button.ghost{background:var(--card);color:var(--ink)}
+button:focus-visible,select:focus-visible{outline:3px solid var(--amb);outline-offset:2px}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tw{overflow-x:auto;background:var(--card);border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;min-width:480px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:600;color:var(--mut);font-size:13px}
+.pill{display:inline-block;padding:1px 8px;color:#fff;font-size:12px}
+.low{color:var(--bad);font-weight:600}
+.mg{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.mc{background:var(--card);border:1px solid var(--line);border-top:6px solid var(--amb);padding:12px;display:flex;flex-direction:column;gap:8px}
+.mc.lowc{border-top-color:var(--bad)}
+.mc h3{margin:0;font-family:"Barlow Condensed",sans-serif;font-size:23px;line-height:1.1}
+.qr.sm{padding:6px;width:120px;height:120px}
+.nums{display:grid;grid-template-columns:repeat(2,1fr);gap:4px 10px;border-top:1px solid var(--line);padding-top:8px}
+.nums b{display:block;font-family:"Barlow Condensed",sans-serif;font-size:28px;line-height:1}
+.nums span{font-size:12px;color:var(--mut)}
+.nums .i b{color:var(--ok)}.nums .o b{color:var(--bad)}
+</style></head>
+<body><main>
+<h1>SmartSlot iPhone godown</h1>
+<p class="sub">A single-product warehouse for iPhones, kept at normal room temperature. The main QR code covers the whole godown, and each model category below has its own QR code with available stock, units in and units out.</p>
+<div class="alert" id="alert" role="alert"></div>
+
+<div class="grid">
+  <div class="card">
+    <b>Whole godown QR (all models)</b>
+    <div class="meta" style="margin-bottom:10px">Stick this on the godown door or shelf. Scanning it returns the live figures below.</div>
+    <div class="qr" id="qr"></div>
+    <div class="scan" id="scan"></div>
+  </div>
+  <div class="card">
+    <b>Live stock</b>
+    <div class="stats" style="margin-top:8px">
+      <div class="stat"><b id="sStock"></b><span>Available iPhones</span></div>
+      <div class="stat"><b id="sRoom"></b><span>Space left (units)</span></div>
+      <div class="stat in"><b id="sIn"></b><span>Came in today</span></div>
+      <div class="stat out"><b id="sOut"></b><span>Went out today</span></div>
+    </div>
+    <div class="bar"><i id="fill"></i></div>
+    <div class="meta" id="fillTxt"></div>
+    <div class="bins" id="bins"></div>
+    <div class="meta" style="margin-top:10px">Room temperature</div>
+    <div class="temp" id="temp"></div>
+    <div class="meta">Normal room target 24°C · safe range 0 to 35°C</div>
+  </div>
+</div>
+
+<h2>Model categories</h2>
+<div class="mg" id="mg"></div>
+
+<h2>Simulate a dock scan</h2>
+<div class="card ctl">
+  <label>Model <select id="mdl"></select></label>
+  <label>Quantity <select id="qty"><option>5</option><option selected>10</option><option>25</option><option>50</option></select></label>
+  <button id="bIn">Scan IN (receive)</button>
+  <button id="bOut">Scan OUT (dispatch)</button>
+  <button id="bHeat" class="ghost">Simulate AC failure</button>
+  <button id="bCool" class="ghost">Restore AC</button>
+</div>
+
+<h2>Movement log</h2>
+<div class="tw"><table id="log"></table></div>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const SET=24,HI=35,LO=0,NB=60;
+// sku, name, shelf capacity, stock, in today, out today, reorder level
+const M=[["IP16","iPhone 16",200,140,50,40,40],["IP16PM","iPhone 16 Pro Max",180,110,40,60,35],["IP17","iPhone 17",220,170,60,55,45],
+["IP17PM","iPhone 17 Pro Max",200,150,50,70,40],["IP18P","iPhone 18 Pro",160,90,40,30,30],["IP18PM","iPhone 18 Pro Max",140,70,30,20,25],
+["IPDUO","iPhone Duo",60,25,10,5,10]].map(([id,name,cap,stock,inn,out,re])=>({id,name,cap,stock,inn,out,re}));
+const sum=k=>M.reduce((a,m)=>a+m[k],0),CAP=sum("cap");
+let temp=SET,fault=false;
+let log=[["09:12:40","IN","iPhone 17",60,"Supplier shipment"],["10:05:18","OUT","iPhone 16 Pro Max",35,"Order #4821"],["11:30:02","IN","iPhone 18 Pro",40,"Supplier shipment"],["12:44:51","OUT","iPhone 17 Pro Max",40,"Order #4830"]];
+const pad=n=>String(n).padStart(2,"0");
+const now=()=>{const d=new Date();return pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds())};
+const $=id=>document.getElementById(id);
+let stamp=now();
+
+function drawQR(){
+ const st={stock:sum("stock"),inn:sum("inn"),out:sum("out")},low=M.some(m=>m.stock<=m.re);
+ const text=`SMARTSLOT|IPHONE ALL|STOCK:${st.stock}|IN:${st.inn}|OUT:${st.out}|AT:${stamp}`;
+ const el=$("qr");el.innerHTML="";
+ try{new QRCode(el,{text,width:176,height:176,colorDark:"#000000",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M})}catch(e){el.textContent="QR unavailable"}
+ $("scan").innerHTML=`<div class="meta">What a scan shows (updated ${stamp})</div>
+  <div><span>Product</span><b>iPhone</b></div>
+  <div><span>Available stock</span><b>${st.stock} units</b></div>
+  <div><span>Came in today</span><b>${st.inn}</b></div>
+  <div><span>Went out today</span><b>${st.out}</b></div>
+  <div><span>Status</span><b class="${low?"low":""}">${low?"Some models low":"OK"}</b></div>`;
+}
+function render(){
+ const st={stock:sum("stock"),inn:sum("inn"),out:sum("out")},pct=st.stock/CAP*100,left=CAP-st.stock,hot=temp>HI||temp<LO;
+ $("sStock").textContent=st.stock;$("sRoom").textContent=left;$("sIn").textContent=st.inn;$("sOut").textContent=st.out;
+ $("fill").style.width=pct+"%";$("fillTxt").textContent=Math.round(pct)+"% full · capacity "+CAP+" units";
+ let rem=st.stock/(CAP/NB),c="";
+ for(let i=0;i<NB;i++){const f=Math.max(0,Math.min(1,rem));rem-=1;c+=`<b title="Bin ${i+1}: ${Math.round(f*100)}% full"><i style="height:${f*100}%"></i></b>`}
+ $("bins").innerHTML=c;
+ $("temp").textContent=temp.toFixed(1)+"°C";$("temp").className="temp"+(hot?" hot":"");
+ const a=[],lows=M.filter(m=>m.stock<=m.re).map(m=>m.name+" ("+m.stock+" left)");if(lows.length)a.push("Low stock: "+lows.join(", "));
+ if(hot)a.push("Room is "+temp.toFixed(1)+"°C, outside the safe range of "+LO+" to "+HI+"°C.");
+ $("alert").style.display=a.length?"block":"none";$("alert").textContent=a.join(" | ");
+ $("log").innerHTML="<tr><th>Time<th>Movement<th>Model<th>Units<th>Reference</tr>"+log.slice(-8).reverse().map(r=>
+  `<tr><td>${r[0]}<td><span class="pill" style="background:${r[1]==="IN"?"var(--ok)":"var(--bad)"}">${r[1]}</span><td>${r[2]}<td>${r[3]}<td>${r[4]}</tr>`).join("");
+ M.forEach(cardNums);
+}
+function move(dir){
+ const m=M.find(x=>x.id===$("mdl").value),q=+$("qty").value;
+ if(dir==="IN"){if(m.stock+q>m.cap){alert(m.name+" has only "+(m.cap-m.stock)+" units of space left.");return}
+  m.stock+=q;m.inn+=q;log.push([now(),"IN",m.name,q,"Supplier shipment"])}
+ else{if(q>m.stock){alert("Only "+m.stock+" "+m.name+" in stock.");return}
+  m.stock-=q;m.out+=q;log.push([now(),"OUT",m.name,q,"Order #"+(4831+log.length)])}
+ stamp=now();drawQR();drawCat(m);render();
+}
+function drawCat(m){
+ const el=$("qr-"+m.id);el.innerHTML="";
+ const text=`SMARTSLOT|${m.name}|AVAILABLE:${m.stock}|REMAINING:${m.cap-m.stock}|IN:${m.inn}|OUT:${m.out}|AT:${stamp}`;
+ try{new QRCode(el,{text,width:104,height:104,colorDark:"#000000",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.M})}catch(e){el.textContent="QR unavailable"}
+}
+function cardNums(m){
+ $("c-"+m.id).className="mc"+(m.stock<=m.re?" lowc":"");
+ $("st-"+m.id).textContent=m.stock;$("sp-"+m.id).textContent=m.cap-m.stock;$("in-"+m.id).textContent=m.inn;$("out-"+m.id).textContent=m.out;
+ $("tag-"+m.id).innerHTML=m.stock<=m.re?'<span class="low">Low stock, reorder at '+m.re+'</span>':'<span class="meta">Stock OK · reorder at '+m.re+'</span>';
+}
+$("mg").innerHTML=M.map(m=>`<div class="mc" id="c-${m.id}"><div><h3>${m.name}</h3><div class="meta">${m.id} · capacity ${m.cap}</div></div>
+ <div class="qr sm" id="qr-${m.id}"></div>
+ <div class="nums"><div><b id="st-${m.id}"></b><span>Available</span></div><div><b id="sp-${m.id}"></b><span>Remaining space</span></div>
+ <div class="i"><b id="in-${m.id}"></b><span>In today</span></div><div class="o"><b id="out-${m.id}"></b><span>Out today</span></div></div>
+ <div id="tag-${m.id}"></div></div>`).join("");
+$("mdl").innerHTML=M.map(m=>`<option value="${m.id}">${m.name}</option>`).join("");
+$("bIn").onclick=()=>move("IN");$("bOut").onclick=()=>move("OUT");
+$("bHeat").onclick=()=>{fault=true};$("bCool").onclick=()=>{fault=false};
+setInterval(()=>{temp+=((fault?42:SET)-temp)*0.12+(Math.random()-.5)*0.3;render()},2000);
+drawQR();M.forEach(drawCat);render();
+</script></body></html>
